@@ -3,6 +3,7 @@ package user
 import (
 	"fmt"
 
+	"github.com/Saifu0/user-service-api/common/dates"
 	"github.com/Saifu0/user-service-api/common/errors"
 )
 
@@ -31,6 +32,7 @@ func (user *User) Save() *errors.RestErr {
 		}
 		return errors.NewBadRequest(fmt.Sprintf("user id %d already exists", user.Id))
 	}
+	user.DateCreated = dates.GetNowString()
 	userDB[user.Id] = user
 	return nil
 }
