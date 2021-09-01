@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Saifu0/user-service-api/common/dates"
 	usersdb "github.com/Saifu0/user-service-api/datasources/mysql/users_db"
+	"github.com/go-sql-driver/mysql"
 	"strings"
 
 	"github.com/Saifu0/user-service-api/common/errors"
@@ -30,11 +31,11 @@ func (user *User) Get() *errors.RestErr {
 	}(stmt)
 
 	result := stmt.QueryRow(user.Id)
-	if err := result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated); err != nil {
-		if strings.Contains(err.Error(), erroNoRow) {
+	if getErr := result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated); getErr != nil {
+		if strings.Contains(getErr.Error(), erroNoRow) {
 			return errors.NewNotFound(fmt.Sprintf("user with user id %d, not found", user.Id))
 		}
-		return errors.NewInternalServerError(fmt.Sprintf("error while getting user with id %d: %s", user.Id, err.Error()))
+		return errors.NewInternalServerError(fmt.Sprintf("error while getting user with id %d: %s", user.Id, getErr.Error()))
 	}
 
 	return nil
@@ -53,12 +54,17 @@ func (user *User) Save() *errors.RestErr {
 	}(stmt)
 
 	user.DateCreated = dates.GetNowString()
-	insertResult, err := stmt.Exec(user.FirstName, user.LastName, user.Email, user.DateCreated)
-	if err != nil {
-		if strings.Contains(err.Error(), indexUniqueEmail) {
+	insertResult, saveErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.DateCreated)
+	if saveErr != nil {
+		sqlErr, ok := saveErr.(*mysql.MySQLError)
+		if !ok {
+			return errors.NewInternalServerError(fmt.Sprintf("error while trying to insert user: %s", saveErr.Error()))
+		}
+		switch sqlErr.Number {
+		case 1092:
 			return errors.NewBadRequest(fmt.Sprintf("email %s already exists", user.Email))
 		}
-		return errors.NewInternalServerError(fmt.Sprintf("error while trying to insert user: %s", err.Error()))
+		return errors.NewInternalServerError(fmt.Sprintf("error while trying to insert user: %s", saveErr.Error()))
 	}
 	userId, err := insertResult.LastInsertId()
 	if err != nil {
