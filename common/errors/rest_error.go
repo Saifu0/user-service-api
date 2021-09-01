@@ -1,5 +1,7 @@
 package errors
 
+import "net/http"
+
 type RestErr struct {
 	Message string `json:"message"`
 	Status  int    `json:"status"`
@@ -9,7 +11,7 @@ type RestErr struct {
 func NewBadRequest(message string) *RestErr {
 	return &RestErr{
 		Message: message,
-		Status:  400,
+		Status:  http.StatusBadRequest,
 		Error:   "bad request",
 	}
 }
@@ -17,7 +19,15 @@ func NewBadRequest(message string) *RestErr {
 func NewNotFound(message string) *RestErr {
 	return &RestErr{
 		Message: message,
-		Status:  404,
+		Status:  http.StatusNotFound,
 		Error:   "not found",
+	}
+}
+
+func NewInternalServerError(message string) *RestErr {
+	return &RestErr{
+		Message: message,
+		Status:  http.StatusInternalServerError,
+		Error:   "internal server error",
 	}
 }
