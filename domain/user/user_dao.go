@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"github.com/Saifu0/user-service-api/common/dates"
 	usersdb "github.com/Saifu0/user-service-api/datasources/mysql/users_db"
+	"strings"
 
 	"github.com/Saifu0/user-service-api/common/errors"
 )
 
 const (
-	queryInsertUser = "INSERT INTO users (first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
+	indexUniqueEmail = "email_UNIQUE"
+	queryInsertUser  = "INSERT INTO users (first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
 )
 
 var (
@@ -48,6 +50,9 @@ func (user *User) Save() *errors.RestErr {
 	user.DateCreated = dates.GetNowString()
 	insertResult, err := stmt.Exec(user.FirstName, user.LastName, user.Email, user.DateCreated)
 	if err != nil {
+		if strings.Contains(err.Error(), indexUniqueEmail) {
+			return errors.NewBadRequest(fmt.Sprintf("email %s already exists", user.Email))
+		}
 		return errors.NewInternalServerError(fmt.Sprintf("error while trying to insert user: %s", err.Error()))
 	}
 	userId, err := insertResult.LastInsertId()
