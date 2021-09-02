@@ -16,6 +16,7 @@ const (
 	queryInsertUser = "INSERT INTO users (first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
 	queryGetUser    = "SELECT id, first_name, last_name, email, date_created FROM users WHERE id=?;"
 	queryUpdateUser = "UPDATE users SET first_name=?, last_name=?, email=? WHERE id=?;"
+	queryDeleteUser = "DELETE FROM users WHERE id=?;"
 )
 
 func (user *User) Get() *errors.RestErr {
@@ -97,6 +98,25 @@ func (user *User) Update() *errors.RestErr {
 			return errors.NewBadRequest(fmt.Sprintf("email %s already exists", user.Email))
 		}
 		return errors.NewInternalServerError(fmt.Sprintf("error while trying to update user: %s", err.Error()))
+	}
+	return nil
+}
+
+func (user *User) Delete() *errors.RestErr {
+	stmt, err := usersdb.Client.Prepare(queryDeleteUser)
+	if err != nil {
+		fmt.Println("error!")
+		return errors.NewInternalServerError(err.Error())
+	}
+	defer func(stmt *sql.Stmt) {
+		err := stmt.Close()
+		if err != nil {
+			return
+		}
+	}(stmt)
+	_, err = stmt.Exec(user.Id)
+	if err != nil {
+		return errors.NewInternalServerError(fmt.Sprintf("error while trying to delete user: %s", err.Error()))
 	}
 	return nil
 }
