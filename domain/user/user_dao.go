@@ -12,11 +12,12 @@ import (
 )
 
 const (
-	erroNoRow       = "no rows in result set"
-	queryInsertUser = "INSERT INTO users (first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
-	queryGetUser    = "SELECT id, first_name, last_name, email, date_created FROM users WHERE id=?;"
-	queryUpdateUser = "UPDATE users SET first_name=?, last_name=?, email=? WHERE id=?;"
-	queryDeleteUser = "DELETE FROM users WHERE id=?;"
+	erroNoRow             = "no rows in result set"
+	queryInsertUser       = "INSERT INTO users (first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
+	queryGetUser          = "SELECT id, first_name, last_name, email, date_created FROM users WHERE id=?;"
+	queryUpdateUser       = "UPDATE users SET first_name=?, last_name=?, email=? WHERE id=?;"
+	queryDeleteUser       = "DELETE FROM users WHERE id=?;"
+	queryFindUserByStatus = "SELECT id, first_name, last_name, email, date_created, status FROM users WHERE status=?;"
 )
 
 func (user *User) Get() *errors.RestErr {
@@ -119,4 +120,35 @@ func (user *User) Delete() *errors.RestErr {
 		return errors.NewInternalServerError(fmt.Sprintf("error while trying to delete user: %s", err.Error()))
 	}
 	return nil
+}
+
+func (user *User) FindByUser(status string) ([]User, *errors.RestErr) {
+	stmt, err := usersdb.Client.Prepare(queryFindUserByStatus)
+	if err != nil {
+		fmt.Println("error!")
+		return nil, errors.NewInternalServerError(err.Error())
+	}
+	defer func(stmt *sql.Stmt) {
+		err := stmt.Close()
+		if err != nil {
+			return
+		}
+	}(stmt)
+	rows, err := stmt.Query(status)
+	if err != nil {
+		return nil, errors.NewInternalServerError(fmt.Sprintf("error while trying to find users using status, %s", err.Error()))
+	}
+
+	result := make([]User, 0)
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.Id, &u.FirstName, &u.LastName, &u.Email, &u.DateCreated, &u.Status); err != nil {
+			return nil, errors.NewInternalServerError(fmt.Sprintf("error while trying to find users using status, %s", err.Error()))
+		}
+		result = append(result, u)
+	}
+	if len(result) == 0 {
+		return nil, errors.NewNotFound(fmt.Sprintf("no users with status %s found", status))
+	}
+	return result, nil
 }
