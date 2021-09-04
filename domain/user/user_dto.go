@@ -17,9 +17,13 @@ type User struct {
 }
 
 func (user *User) Validate() *errors.RestErr {
-	email := strings.TrimSpace(strings.ToLower(user.Email))
-	if email == "" {
+	user.Email = strings.TrimSpace(strings.ToLower(user.Email))
+	if user.Email == "" {
 		return errors.NewBadRequest("invalid email address")
+	}
+	user.Password = strings.TrimSpace(user.Password)
+	if user.Password == "" || len(user.Password) < 8 {
+		return errors.NewBadRequest("invalid password")
 	}
 	return nil
 }

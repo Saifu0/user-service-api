@@ -2,6 +2,8 @@ package services
 
 import (
 	"fmt"
+
+	"github.com/Saifu0/user-service-api/common/dates"
 	"github.com/Saifu0/user-service-api/common/errors"
 	"github.com/Saifu0/user-service-api/domain/user"
 )
@@ -10,6 +12,8 @@ func CreateUser(user user.User) (*user.User, *errors.RestErr) {
 	if err := user.Validate(); err != nil {
 		return nil, err
 	}
+
+	user.DateCreated = dates.GetNowDB()
 	if err := user.Save(); err != nil {
 		return nil, err
 	}

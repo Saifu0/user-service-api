@@ -3,18 +3,18 @@ package user
 import (
 	"database/sql"
 	"fmt"
-	"github.com/Saifu0/user-service-api/common/dates"
+	"strings"
+
 	usersdb "github.com/Saifu0/user-service-api/datasources/mysql/users_db"
 	"github.com/go-sql-driver/mysql"
-	"strings"
 
 	"github.com/Saifu0/user-service-api/common/errors"
 )
 
 const (
 	erroNoRow             = "no rows in result set"
-	queryInsertUser       = "INSERT INTO users (first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
-	queryGetUser          = "SELECT id, first_name, last_name, email, date_created FROM users WHERE id=?;"
+	queryInsertUser       = "INSERT INTO users (first_name, last_name, email, password, status, date_created) VALUES(?, ?, ?, ?, ?, ?);"
+	queryGetUser          = "SELECT id, first_name, last_name, email, status, date_created FROM users WHERE id=?;"
 	queryUpdateUser       = "UPDATE users SET first_name=?, last_name=?, email=? WHERE id=?;"
 	queryDeleteUser       = "DELETE FROM users WHERE id=?;"
 	queryFindUserByStatus = "SELECT id, first_name, last_name, email, date_created, status FROM users WHERE status=?;"
@@ -33,7 +33,7 @@ func (user *User) Get() *errors.RestErr {
 	}(stmt)
 
 	result := stmt.QueryRow(user.Id)
-	if getErr := result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated); getErr != nil {
+	if getErr := result.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.Status, &user.DateCreated); getErr != nil {
 		if strings.Contains(getErr.Error(), erroNoRow) {
 			return errors.NewNotFound(fmt.Sprintf("user with user id %d, not found", user.Id))
 		}
@@ -55,8 +55,7 @@ func (user *User) Save() *errors.RestErr {
 		}
 	}(stmt)
 
-	user.DateCreated = dates.GetNowString()
-	insertResult, saveErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.DateCreated)
+	insertResult, saveErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.Password, user.Status, user.DateCreated)
 	if saveErr != nil {
 		sqlErr, ok := saveErr.(*mysql.MySQLError)
 		if !ok {
